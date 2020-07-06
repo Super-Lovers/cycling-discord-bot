@@ -67,11 +67,29 @@ clientDiscord.on('message', function (message) {
         var totalAverage = averagesSum / averages.length;
         sendMessageToChannel(generalChannelID, "Your total average is " + totalAverage);
     }
+    
+    if (command == "$getTotalDistance") {
+        var distances = [];
+
+        for (let i = 0; i < sessions.length; i++) {
+            const element = sessions[i];
+            
+            distances.push(element.distanceTravelled);
+        }
+
+        var sumOfDistances = 0;
+        for (let i = 0; i < distances.length; i++) {
+            const element = distances[i];
+            sumOfDistances = parseInt(sumOfDistances) + parseInt(element);
+        }
+
+        sendMessageToChannel(generalChannelID, "Your total distance travelled is " + sumOfDistances + "km/ph");
+    }
 
     if (message.content == "$help") {
         sendMessageToChannel(
             generalChannelID,
-            "You can add a session in the format: \n``$addSession date calories distance``"
+            "You can add a session in the format: \n``$addSession calories distance averageSpeed maxSpeed duration``"
         );
     }
 });
