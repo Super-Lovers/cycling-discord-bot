@@ -5,6 +5,8 @@ const clientDiscord = new Discord.Client();
 
 const generalChannelID = "729690910626938973";
 
+var sessions = [];
+
 // Here we connect to the discord server and our bot
 clientDiscord.login("NzI5NjkwMDY5NTAxMzQ1OTQz.XwMsew.M2sevln-y98gTv2XOY6BX6brJII");
 
@@ -42,6 +44,28 @@ clientDiscord.on('message', function (message) {
             duration: arguments[5],
             author: message.author.username,
         };
+
+        sessions.push(session);
+        sendMessageToChannel(generalChannelID, "Session added!");
+    }
+    
+    if (command == "$getTotalAverage") {
+        var averages = [];
+
+        for (let i = 0; i < sessions.length; i++) {
+            const element = sessions[i];
+            
+            averages.push(element.averageSpeed);
+        }
+
+        var averagesSum = 0;
+        for (let i = 0; i < averages.length; i++) {
+            const element = averages[i];
+            averagesSum = parseInt(averagesSum) + parseInt(element);
+        }
+
+        var totalAverage = averagesSum / averages.length;
+        sendMessageToChannel(generalChannelID, "Your total average is " + totalAverage);
     }
 
     if (message.content == "$help") {
