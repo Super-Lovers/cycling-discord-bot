@@ -1,2 +1,2 @@
 # cycling-discord-bot
-A bot about cycling
+A bot about cycling and calories
