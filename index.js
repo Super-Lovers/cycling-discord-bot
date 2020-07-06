@@ -55,7 +55,9 @@ clientDiscord.on('message', function (message) {
         for (let i = 0; i < sessions.length; i++) {
             const element = sessions[i];
             
-            averages.push(element.averageSpeed);
+            if (sessions[i].author == message.author.username) {
+                averages.push(element.averageSpeed);
+            }
         }
 
         var averagesSum = 0;
@@ -65,7 +67,7 @@ clientDiscord.on('message', function (message) {
         }
 
         var totalAverage = averagesSum / averages.length;
-        sendMessageToChannel(generalChannelID, "Your total average is " + totalAverage);
+        sendMessageToChannel(generalChannelID, "Your total average is " + totalAverage + "km/ph");
     }
     
     if (command == "$getTotalDistance") {
@@ -74,7 +76,9 @@ clientDiscord.on('message', function (message) {
         for (let i = 0; i < sessions.length; i++) {
             const element = sessions[i];
             
-            distances.push(element.distanceTravelled);
+            if (sessions[i].author == message.author.username) {
+                distances.push(element.distanceTravelled);
+            }
         }
 
         var sumOfDistances = 0;
@@ -83,7 +87,7 @@ clientDiscord.on('message', function (message) {
             sumOfDistances = parseInt(sumOfDistances) + parseInt(element);
         }
 
-        sendMessageToChannel(generalChannelID, "Your total distance travelled is " + sumOfDistances + "km/ph");
+        sendMessageToChannel(generalChannelID, "Your total distance travelled is " + sumOfDistances + "km");
     }
 
     if (message.content == "$help") {
