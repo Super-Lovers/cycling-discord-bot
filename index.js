@@ -19,7 +19,7 @@ clientDiscord.login('NzI5NjkwMDY5NTAxMzQ1OTQz.XwMsew.M2sevln-y98gTv2XOY6BX6brJII
 
 // When the bot is initialized after client.log, this function will run
 clientDiscord.once('ready', () => {
-	sendMessageToChannel(generalChannelID, 'Cycling bot is online! 🤖');
+	sendMessageToChannel(generalChannelID, 'Cycling bot is online 🤖');
 });
 
 clientDiscord.on('message', (message) => {
@@ -79,7 +79,16 @@ clientDiscord.on('message', (message) => {
 			const sessions = await db.collection('sessions');
 
 			await sessions.insertOne(session);
-			sendMessageToChannel(generalChannelID, 'Session was successfully saved!');
+
+			const sessionPreview =
+				'Session **' + session.date + '**\n\n' +
+				'=> **Calories burned:** ``' + session.calories + '`` 🍕\n' +
+				'=> **Distance travelled:** ``' + session.distanceTravelled + ' km`` 📐\n' +
+				'=> **Average speed:** ``' + session.averageSpeed + ' km/ph`` 💨\n' +
+				'=> **Maximum speed:** ``' + session.maxSpeed + ' km/ph`` 💨\n' +
+				'=> **Duration:** ``' + session.duration + ' mins.`` ⏲️\n';
+
+			message.reply(' your session was successfully saved ✅ \n' + sessionPreview);
 		});
 	}
 
@@ -138,14 +147,14 @@ clientDiscord.on('message', (message) => {
 				sumOfDistances = parseInt(sumOfDistances) + parseInt(element);
 			}
 
-			message.reply(' your total distance travelled is ``' + sumOfDistances + ' km`` 🛣️');
+			message.reply(' your total distance travelled is ``' + sumOfDistances + ' km`` 📐');
 		});
 	}
 
 	if (message.content == '$help') {
 		sendMessageToChannel(
 			generalChannelID,
-			'You can add a session in the format: \n$addSession ``calories`` ``distance`` ``averageSpeed`` ``maxSpeed`` ``duration``'
+			'You can add a session in the format: \n**$addSession** ``calories`` ``distance`` ``averageSpeed`` ``maxSpeed`` ``duration``'
 		);
 	}
 });
