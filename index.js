@@ -36,10 +36,35 @@ clientDiscord.on('message', (message) => {
 	}
 
 	/**
+	 * Replies back to the user with the last session he added.
+	 */
+	if (message.content == '$getSession') {
+		clientMongo.connect(async () => {
+			const db = clientMongo.db('cycling-bot');
+			const sessions = await db.collection('sessions').find().toArray();
+
+			let latestSessionFromAuthor = 'none';
+			for (let i = 0; i < sessions.length; i++) {
+				const element = sessions[i];
+
+				if (element.author == message.author.username) {
+					latestSessionFromAuthor = element;
+				}
+			}
+
+			if (latestSessionFromAuthor == 'none') {
+				message.reply(' you don\'t have any sessions to retrieve ❌');
+			} else {
+				message.reply(getSessionString(latestSessionFromAuthor));
+			}
+		});
+	}
+
+	/**
 	 * Replies back to the user how many sessions were found
 	 * based on the given session/s date and displays them.
 	 */
-	if (command == '$getSession') {
+	if (command == '$getSession' && message.content.length > command.length) {
 		// Retrieving the title from the command string
 		let indexOfFirstQuote = 0;
 		let indexOfLastQuote = 0;
