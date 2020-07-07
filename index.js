@@ -35,20 +35,45 @@ clientDiscord.on('message', (message) => {
 		command += message.content[i];
 	}
 
-	// Implementations for specific commands
-	// *****************
-	if (command == '$getSessions') {
-		let sessions = [];
+	/**
+	 * Replies back to the user how many sessions were found
+	 * based on the given session/s date and displays them.
+	 */
+	if (command == '$getSession') {
+		const commandArguments = message.content.split(' ');
+		const sessionDay = commandArguments[1];
+		const sessionMonth = commandArguments[2];
+		const sessionYear = commandArguments[3];
+		const foundSessions = [];
 
 		clientMongo.connect(async () => {
 			const db = clientMongo.db('cycling-bot');
-			sessions = await db.collection('sessions').find().toArray();
+			const sessions = await db.collection('sessions').find().toArray();
 
 			for (let i = 0; i < sessions.length; i++) {
 				const element = sessions[i];
+				// 15:38 - 2/6/2020 => [15:38 ], [ 2/6/2020] => [ 2, 6, 2020]
+				const elementDate = element.date.split('-')[1].split('/');
+				const elementDay = parseInt(elementDate[0]);
+				const elementMonth = parseInt(elementDate[1]);
+				const elementYear = parseInt(elementDate[2]);
 
-				if (element.author == message.author.username) {
-					sendMessageToChannel(generalChannelID, element.calories);
+				if (sessionDay == elementDay &&
+					sessionMonth == elementMonth &&
+					sessionYear == elementYear) {
+
+					foundSessions.push(element);
+				}
+			}
+
+			if (foundSessions.length == 0) {
+				message.reply(' no sessions were found ❌');
+			} else {
+				message.reply(' ' + foundSessions.length + ' sessions were found ✅\n');
+
+				for (let i = 0; i < foundSessions.length; i++) {
+					const element = foundSessions[i];
+					message.reply(getSessionString(element));
 				}
 			}
 		});
@@ -80,15 +105,7 @@ clientDiscord.on('message', (message) => {
 
 			await sessions.insertOne(session);
 
-			const sessionPreview =
-				'Session **' + session.date + '**\n\n' +
-				'=> **Calories burned:** ``' + session.calories + '`` 🍕\n' +
-				'=> **Distance travelled:** ``' + session.distanceTravelled + ' km`` 📐\n' +
-				'=> **Average speed:** ``' + session.averageSpeed + ' km/ph`` 💨\n' +
-				'=> **Maximum speed:** ``' + session.maxSpeed + ' km/ph`` 💨\n' +
-				'=> **Duration:** ``' + session.duration + ' mins.`` ⏲️\n';
-
-			message.reply(' your session was successfully saved ✅ \n' + sessionPreview);
+			message.reply(' your session was successfully saved ✅ \n' + getSessionString(session));
 		});
 	}
 
@@ -151,14 +168,28 @@ clientDiscord.on('message', (message) => {
 		});
 	}
 
+	/**
+	 * Replies to the user with the total distance out of all his
+	 * sessions' travelled distances summed up throughout history
+	 */
 	if (message.content == '$help') {
-		sendMessageToChannel(
-			generalChannelID,
-			'You can add a session in the format: \n**$addSession** ``calories`` ``distance`` ``averageSpeed`` ``maxSpeed`` ``duration``'
+		message.reply(
+			' here are the commands: \n' +
+			'**$addSession** ``calories`` ``distance`` ``average speed`` ``max speed`` ``duration``\n' +
+			'**$getSession** ``day`` ``month`` ``year``\n\n'
 		);
 	}
 });
 
 function sendMessageToChannel(channelId, message) {
 	clientDiscord.channels.cache.get(channelId).send(message);
+}
+
+function getSessionString(session) {
+	return 'Session **' + session.date + '**\n\n' +
+		'=> **Calories burned:** ``' + session.calories + '`` 🍕\n' +
+		'=> **Distance travelled:** ``' + session.distanceTravelled + ' km`` 📐\n' +
+		'=> **Average speed:** ``' + session.averageSpeed + ' km/ph`` 💨\n' +
+		'=> **Maximum speed:** ``' + session.maxSpeed + ' km/ph`` 💨\n' +
+		'=> **Duration:** ``' + session.duration + ' mins.`` ⏲️\n';
 }
