@@ -70,6 +70,8 @@ clientDiscord.on('message', (message) => {
 			for (let i = 0; i < sessions.length; i++) {
 				const element = sessions[i];
 
+				if (element.author != message.author.username) { continue; }
+
 				// 15:38 - 2/6/2020 => [15:38 ], [ 2/6/2020] => [ 2, 6, 2020]
 				const elementDate = element.date.split('-')[1].split('/');
 				const elementDay = parseInt(elementDate[0]);
