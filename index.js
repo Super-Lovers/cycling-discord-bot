@@ -21,7 +21,7 @@ clientDiscord.login('NzI5NjkwMDY5NTAxMzQ1OTQz.XwMsew.M2sevln-y98gTv2XOY6BX6brJII
 
 // When the bot is initialized after client.log, this function will run
 clientDiscord.once('ready', function () {
-    sendMessageToChannel(generalChannelID, 'Cycling bot is online!');
+    sendMessageToChannel(generalChannelID, 'Cycling bot is online! 🤖');
 });
 
 clientDiscord.on('message', function (message) {
@@ -84,50 +84,64 @@ clientDiscord.on('message', function (message) {
     }
 
     if (command == '$getTotalAverage') {
-        let averages = [];
+        clientMongo.connect(async () => {
+            let db = clientMongo.db('cycling-bot');
+            let sessions = await db.collection('sessions').find().toArray();
+            let averages = [];
+            const authorUsername = message.author.username;
 
-        for (let i = 0; i < sessions.length; i++) {
-            const element = sessions[i];
-
-            if (sessions[i].author == message.author.username) {
-                averages.push(element.averageSpeed);
+            for (let i = 0; i < sessions.length; i++) {
+                const element = sessions[i];
+    
+                if (sessions[i].author == authorUsername) {
+                    averages.push(element.averageSpeed);
+                }
             }
-        }
 
-        let averagesSum = 0;
-        for (let i = 0; i < averages.length; i++) {
-            const element = averages[i];
-            averagesSum = parseInt(averagesSum) + parseInt(element);
-        }
+            let averagesSum = 0;
+            for (let i = 0; i < averages.length; i++) {
+                const element = averages[i];
+                averagesSum = parseInt(averagesSum) + parseInt(element);
+            }
+    
+            const totalAverage = averagesSum / averages.length;
+            message.reply(' your total average speed is ``' + totalAverage + ' km/ph`` 💨');
 
-        let totalAverage = averagesSum / averages.length;
-        sendMessageToChannel(generalChannelID, 'Your total average is ``' + totalAverage + ' km/ph``');
+            clientMongo.close();
+        });
     }
 
     if (command == '$getTotalDistance') {
-        let distances = [];
+        clientMongo.connect(async () => {
+            let db = clientMongo.db('cycling-bot');
+            let sessions = await db.collection('sessions').find().toArray();
+            let distances = [];
+            const authorUsername = message.author.username;
 
-        for (let i = 0; i < sessions.length; i++) {
-            const element = sessions[i];
-
-            if (sessions[i].author == message.author.username) {
-                distances.push(element.distanceTravelled);
+            for (let i = 0; i < sessions.length; i++) {
+                const element = sessions[i];
+    
+                if (sessions[i].author == authorUsername) {
+                    distances.push(element.distanceTravelled);
+                }
             }
-        }
 
-        let sumOfDistances = 0;
-        for (let i = 0; i < distances.length; i++) {
-            const element = distances[i];
-            sumOfDistances = parseInt(sumOfDistances) + parseInt(element);
-        }
+            let sumOfDistances = 0;
+            for (let i = 0; i < distances.length; i++) {
+                const element = distances[i];
+                sumOfDistances = parseInt(sumOfDistances) + parseInt(element);
+            }
+    
+            message.reply(' your total distance travelled is ``' + sumOfDistances + ' km`` 🛣️');
 
-        sendMessageToChannel(generalChannelID, 'Your total distance travelled is ``' + sumOfDistances + ' km``');
+            clientMongo.close();
+        });
     }
 
     if (message.content == '$help') {
         sendMessageToChannel(
             generalChannelID,
-            'You can add a session in the format: \n``$addSession calories distance averageSpeed maxSpeed duration``'
+            'You can add a session in the format: \n$addSession ``calories`` ``distance`` ``averageSpeed`` ``maxSpeed`` ``duration``'
         );
     }
 });
