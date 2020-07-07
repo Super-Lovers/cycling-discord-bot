@@ -95,7 +95,9 @@ clientDiscord.on('message', (message) => {
 			for (let i = 0; i < sessions.length; i++) {
 				const element = sessions[i];
 
-				if (element.author != message.author.username) { continue; }
+				if (element.author != message.author.username) {
+					continue;
+				}
 
 				// 15:38 - 2/6/2020 => [15:38 ], [ 2/6/2020] => [ 2, 6, 2020]
 				const elementDate = element.date.split('-')[1].split('/');
@@ -123,18 +125,13 @@ clientDiscord.on('message', (message) => {
 
 			if (foundSessions.length == 0) {
 				message.reply(' no sessions were found ❌');
-			} else {
-				if (foundSessions.length == 1) {
-					message.reply(' ' + foundSessions.length + ' session was found ✅\n');
-				} else if (foundSessions.length > 1) {
-					message.reply(' ' + foundSessions.length + ' sessions were found ✅\n');
-				}
+			} else if (foundSessions.length == 1) {
+				message.reply(' ' + foundSessions.length + ' session was found ✅\n');
 
-				for (let i = 0; i < foundSessions.length; i++) {
-					const element = foundSessions[i];
-
-					sendMessageToChannel(generalChannelID, (getSessionString(element)));
-				}
+				sendMessageToChannel(generalChannelID, (getSessionString(foundSessions[0])));
+			} else if (foundSessions.length > 1) {
+				message.reply(' ' + foundSessions.length + ' sessions were found ✅\n');
+				message.channel.send(printPageOfSessions(foundSessions, 1));
 			}
 		});
 	}
@@ -275,4 +272,46 @@ function getSessionString(session) {
 		'=> **Average speed:** ``' + session.averageSpeed + ' km/ph`` 💨\n' +
 		'=> **Maximum speed:** ``' + session.maxSpeed + ' km/ph`` 💨\n' +
 		'=> **Duration:** ``' + session.duration + ' mins.`` ⏲️\n';
+}
+
+/**
+ * Returns a formatted string that represents an individual page
+ * with a list of sessions and instructions on what you can do with it.
+ */
+function printPageOfSessions(sessions, page) {
+	const userPages = [];
+	const pageCapacity = 2;
+	let currentPage = {
+		items: []
+	};
+
+	for (let i = 0, j = 0; i < sessions.length; i++, j++) {
+		const element = sessions[i];
+
+		if (j == pageCapacity) {
+			userPages.push(currentPage);
+
+			currentPage = {
+				items: []
+			};
+
+			j = 0;
+		}
+
+		currentPage.items.push(element);
+	}
+
+	let output = 'Page **' + page + '** out of **' + (userPages.length + 1) + '**.\n\n';
+
+	for (let i = 0; i < userPages[page - 1].items.length; i++) {
+		const element = userPages[page - 1].items[i];
+
+		output += `${i + 1}) \`\`` + element.title + '`` - ' + element.date + '\n';
+	}
+
+	output += '\n**=============== ℹ️ ===============**\n';
+	output += 'a) ``$exit`` to stop browsing pages\n';
+	output += 'b) ``$page [number here]`` to open that page';
+
+	return output;
 }
