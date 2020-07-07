@@ -22,7 +22,9 @@
   "homepage": "https://github.com/kriss9805/cycling-discord-bot#readme",
   "dependencies": {
     "discord.js": "^12.2.0",
-    "eslint": "^7.4.0",
     "mongodb": "^3.5.9"
+  },
+  "devDependencies": {
+    "eslint": "^7.4.0"
   }
 }
