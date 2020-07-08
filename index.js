@@ -22,7 +22,7 @@ clientDiscord.once('ready', () => {
 	sendMessageToChannel(generalChannelID, 'Cycling bot is online 🤖');
 });
 
-clientDiscord.on('message', (message) => {
+clientDiscord.on('message', async (message) => {
 	// Extracts the command part of the message
 	// *****************
 	let command = '';
@@ -36,9 +36,44 @@ clientDiscord.on('message', (message) => {
 	}
 
 	/**
+	 * Checks if the user sending the message has a "profile" in the mongoDB
+	 * and returns the profile object or creates it and then returns it.
+	 */
+	let userObject = 'none';
+	clientMongo.connect(async () => {
+		const db = clientMongo.db('cycling-bot');
+		const usersArray = await db.collection('users').find().toArray();
+		const users = await db.collection('users');
+
+		for (let i = 0; i < usersArray.length; i++) {
+			const element = usersArray[i];
+
+			if (element.author == message.author.username) {
+				userObject = element;
+				break;
+			}
+		}
+
+		if (userObject == 'none') {
+			const newUser = {
+				'state': 'main',
+				'author': message.author.username,
+			};
+
+			userObject = newUser;
+			await users.insertOne(newUser);
+		}
+	});
+
+	/**
 	 * Replies back to the user with the last session he added.
 	 */
 	if (message.content == '$getSession') {
+		if (userObject.state == 'browsing') {
+			message.reply(' please exit browsing pages before issuing other commands ❌');
+			return;
+		}
+
 		clientMongo.connect(async () => {
 			const db = clientMongo.db('cycling-bot');
 			const sessions = await db.collection('sessions').find().toArray();
@@ -91,6 +126,7 @@ clientDiscord.on('message', (message) => {
 		clientMongo.connect(async () => {
 			const db = clientMongo.db('cycling-bot');
 			const sessions = await db.collection('sessions').find().toArray();
+			const users = await db.collection('users');
 
 			for (let i = 0; i < sessions.length; i++) {
 				const element = sessions[i];
@@ -131,6 +167,13 @@ clientDiscord.on('message', (message) => {
 				sendMessageToChannel(generalChannelID, (getSessionString(foundSessions[0])));
 			} else if (foundSessions.length > 1) {
 				message.reply(' ' + foundSessions.length + ' sessions were found ✅\n');
+				userObject.state = 'browsing';
+
+				await users.updateOne(
+					{ 'author': userObject.author },
+					{ $set: { 'state': userObject.state } },
+				);
+
 				message.channel.send(printPageOfSessions(foundSessions, 1));
 			}
 		});
@@ -141,6 +184,11 @@ clientDiscord.on('message', (message) => {
 	 * into the mongoDB instance for that specific user.
 	 */
 	if (command == '$addSession') {
+		if (userObject.state == 'browsing') {
+			message.reply(' please exit browsing pages before issuing other commands ❌');
+			return;
+		}
+
 		const currentDate = new Date();
 		const currentDateFormat = currentDate.getHours() + ':' + currentDate.getMinutes() + ' - ' + currentDate.getDay() + '/' + currentDate.getMonth() + '/' + currentDate.getFullYear();
 
@@ -191,6 +239,11 @@ clientDiscord.on('message', (message) => {
 	 * his sessions' individual averages throughout history
 	 */
 	if (command == '$getTotalAverage') {
+		if (userObject.state == 'browsing') {
+			message.reply(' please exit browsing pages before issuing other commands ❌');
+			return;
+		}
+
 		clientMongo.connect(async () => {
 			const db = clientMongo.db('cycling-bot');
 			const sessions = await db.collection('sessions').find().toArray();
@@ -221,6 +274,11 @@ clientDiscord.on('message', (message) => {
 	 * sessions' travelled distances summed up throughout history
 	 */
 	if (command == '$getTotalDistance') {
+		if (userObject.state == 'browsing') {
+			message.reply(' please exit browsing pages before issuing other commands ❌');
+			return;
+		}
+
 		clientMongo.connect(async () => {
 			const db = clientMongo.db('cycling-bot');
 			const sessions = await db.collection('sessions').find().toArray();
