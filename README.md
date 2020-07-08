@@ -1,10 +1,9 @@
 <p align="center">
   <a href="" rel="noopener">
- <img width=200px height=200px src="header.png" alt="Bot logo"></a>
+ <img width=200px height=200px src="demo/header.png" alt="Bot logo"></a>
 </p>
 
 <h3 align="center">Cycling Discord Bot</h3>
-
 ## 📝 Table of Contents
 
 * [About](#about)
@@ -14,6 +13,7 @@
 	* [Deleting a session](#deleting-session)
 	* [Browsing sessions](#browsing-sessions)
 	* [Modifying session properties](#modifying-session)
+	* [Viewing a session](#viewing-session)
 * [Authors](#authors)
 * [Contribution](#contribution)
 
@@ -27,33 +27,37 @@ This cycling discord bot can be used to log information about your cycling activ
 
 ## 🏁 Getting Started <a name = "getting-started"></a>
 Once the bot is activated in your server, you will receive the following message:
-![Screenshot_1.png](Screenshot_1.png)
+![](demo/activation.png)
 
 The next step before adding any of your sessions, you must set your preferred unit system. You can pick either imperial or metric using the following command:
-![Screenshot_1.png](Screenshot_4.png)
+![](demo/unitSystem.png)
 In case you forget it, you can do ``$getUnitSystem`` to see it again.
 
 Then, you can start using the bot's main commands. To learn how to use them, type ``$help`` in the chat to find out and the bot will reply back to you with this:
-![Screenshot_2.png](Screenshot_2.png)
+![](demo/help.png)
 
 ## 🎈 Usage <a name = "usage"></a>
 ### Adding a session <a name = "adding-session"></a>
 The key use for the bot is to log each cycling activity to it with details about the activity itself, such as calories and distance covered. To add a session, you can use the following example command:
-![Screenshot_3.png](Screenshot_3.png)
+![](demo/addSession.png)
 
 ### Deleting a session <a name = "deleting-session"></a>
 If you wish to delete a session, you can simply use the ``$deleteSession`` command with the session name as an argument.
-![Screenshot_5.png](Screenshot_5.png)
+![](demo/deleteSession.png)
 
 ### Browsing sessions <a name = "browsing-sessions"></a>
 To look at multiple sessions, you use the ``$getSession`` command followed by the day, month and year of the sessions and then browse between pages using ``$page`` followed by the page number:
-![Screenshot_6.png](Screenshot_6.png)
-![Screenshot_7.png](Screenshot_7.png)
+![](demo/pagination.png)
+![](demo/pageNumber.png)
 When you're done browsing, simply write ``$exit`` to stop, so that you can execute normal commands.
 
 ### Modifying session properties <a name = "modifying-session"></a>
-Lastly, if you made a mistake when inputting your session properties, you can use the  ``$modify`` commands for correcting that mistake:
-![Screenshot_7.png](Screenshot_8.png)
+if you made a mistake when inputting your session properties, you can use the  ``$modify`` commands for correcting that mistake:
+![](demo/modify.png)
+
+### Viewing a session <a name = "viewing-session"></a>
+Lastly, to see the details of a session, you use the ``$getSession`` command followed by the name of the session:
+![](demo/viewSession.png)
 
 
 ## ✍️ Authors <a name = "authors"></a>
