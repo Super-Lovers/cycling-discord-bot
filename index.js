@@ -398,6 +398,10 @@ async function main(message, command) {
 		message.reply(' your total distance travelled is ``' + sumOfDistances + ' km`` 📐');
 	}
 
+	/**
+	 * Depending on the property in the 'set' command string, this block
+	 * of code will update that property's value with the value given.
+	 */
 	if (messageText.substring(0, 4) == '$set') {
 		if (userObject.state == 'browsing') {
 			message.reply(' please exit browsing pages before issuing other commands ❌');
