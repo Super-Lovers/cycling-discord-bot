@@ -299,7 +299,7 @@ async function main(message, command) {
 
 	if (command == '$page' && userObject.state == 'browsing') {
 		const commandArguments = message.content.split(' ');
-		message.channel.send(printPageOfSessions(userObject.matchingSessions, commandArguments[1]));
+		message.reply(printPageOfSessions(userObject.matchingSessions, commandArguments[1]));
 	}
 
 	/**
