@@ -23,6 +23,12 @@ clientDiscord.once('ready', () => {
 });
 
 clientDiscord.on('message', async (message) => {
+	if (message.author.username == 'Cycling Bot') {
+		return;
+	}
+
+	const authorUsername = message.author.username;
+
 	// Extracts the command part of the message
 	// *****************
 	let command = '';
@@ -35,20 +41,23 @@ clientDiscord.on('message', async (message) => {
 		command += message.content[i];
 	}
 
-	/**
-	 * Checks if the user sending the message has a "profile" in the mongoDB
-	 * and returns the profile object or creates it and then returns it.
-	 */
-	let userObject = 'none';
-	clientMongo.connect(async () => {
+
+	await clientMongo.connect(async () => {
 		const db = clientMongo.db('cycling-bot');
 		const usersArray = await db.collection('users').find().toArray();
 		const users = await db.collection('users');
+		let userObject = 'none';
 
+		const sessions = await db.collection('sessions').find().toArray();
+
+		/**
+		 * Checks if the user sending the message has a "profile" in the mongoDB
+		 * and returns the profile object or creates it and then returns it.
+		 */
 		for (let i = 0; i < usersArray.length; i++) {
 			const element = usersArray[i];
 
-			if (element.author == message.author.username) {
+			if (element.author == authorUsername) {
 				userObject = element;
 				break;
 			}
@@ -57,32 +66,28 @@ clientDiscord.on('message', async (message) => {
 		if (userObject == 'none') {
 			const newUser = {
 				'state': 'main',
-				'author': message.author.username,
+				'author': authorUsername,
+				'matchingSessions': [],
 			};
 
 			userObject = newUser;
 			await users.insertOne(newUser);
 		}
-	});
 
-	/**
-	 * Replies back to the user with the last session he added.
-	 */
-	if (message.content == '$getSession') {
-		if (userObject.state == 'browsing') {
-			message.reply(' please exit browsing pages before issuing other commands ❌');
-			return;
-		}
-
-		clientMongo.connect(async () => {
-			const db = clientMongo.db('cycling-bot');
-			const sessions = await db.collection('sessions').find().toArray();
+		/**
+		 * Replies back to the user with the last session he added.
+		 */
+		if (message.content == '$getSession') {
+			if (userObject.state == 'browsing') {
+				message.reply(' please exit browsing pages before issuing other commands ❌');
+				return;
+			}
 
 			let latestSessionFromAuthor = 'none';
 			for (let i = 0; i < sessions.length; i++) {
 				const element = sessions[i];
 
-				if (element.author == message.author.username) {
+				if (element.author == authorUsername) {
 					latestSessionFromAuthor = element;
 				}
 			}
@@ -92,46 +97,40 @@ clientDiscord.on('message', async (message) => {
 			} else {
 				message.reply(getSessionString(latestSessionFromAuthor));
 			}
-		});
-	}
-
-	/**
-	 * Replies back to the user how many sessions were found
-	 * based on the given session/s date and displays them.
-	 */
-	if (command == '$getSession' && message.content.length > command.length) {
-		// Retrieving the title from the command string
-		let indexOfFirstQuote = 0;
-		let indexOfLastQuote = 0;
-
-		let isFirstQuoteFound = false;
-
-		const messageText = message.content;
-		for (let i = 0; i < messageText.length; i++) {
-			if (messageText[i] == '"' && isFirstQuoteFound == false) {
-				indexOfFirstQuote = i;
-				isFirstQuoteFound = true;
-			}
-
-			if (messageText[i] == '"' && isFirstQuoteFound == true) {
-				indexOfLastQuote = i;
-			}
 		}
 
-		const commandArguments = (messageText.substring(0, indexOfFirstQuote - 1) + messageText.substring(indexOfLastQuote + 1, messageText.length)).split(' ');
+		/**
+		 * Replies back to the user how many sessions were found
+		 * based on the given session/s date and displays them.
+		 */
+		if (command == '$getSession' && message.content.length > command.length) {
+			// Retrieving the title from the command string
+			let indexOfFirstQuote = 0;
+			let indexOfLastQuote = 0;
 
-		const sessionTitle = messageText.substring(indexOfFirstQuote, indexOfLastQuote + 1);
-		const foundSessions = [];
+			let isFirstQuoteFound = false;
 
-		clientMongo.connect(async () => {
-			const db = clientMongo.db('cycling-bot');
-			const sessions = await db.collection('sessions').find().toArray();
-			const users = await db.collection('users');
+			const messageText = message.content;
+			for (let i = 0; i < messageText.length; i++) {
+				if (messageText[i] == '"' && isFirstQuoteFound == false) {
+					indexOfFirstQuote = i;
+					isFirstQuoteFound = true;
+				}
+
+				if (messageText[i] == '"' && isFirstQuoteFound == true) {
+					indexOfLastQuote = i;
+				}
+			}
+
+			const commandArguments = (messageText.substring(0, indexOfFirstQuote - 1) + messageText.substring(indexOfLastQuote + 1, messageText.length)).split(' ');
+
+			const sessionTitle = messageText.substring(indexOfFirstQuote, indexOfLastQuote + 1);
+			const foundSessions = [];
 
 			for (let i = 0; i < sessions.length; i++) {
 				const element = sessions[i];
 
-				if (element.author != message.author.username) {
+				if (element.author != authorUsername) {
 					continue;
 				}
 
@@ -157,6 +156,15 @@ clientDiscord.on('message', async (message) => {
 
 					foundSessions.push(element);
 				}
+
+				userObject.matchingSessions = foundSessions;
+				await users.updateOne({
+					'author': userObject.author
+				}, {
+					$set: {
+						'matchingSessions': foundSessions
+					}
+				});
 			}
 
 			if (foundSessions.length == 0) {
@@ -169,86 +177,98 @@ clientDiscord.on('message', async (message) => {
 				message.reply(' ' + foundSessions.length + ' sessions were found ✅\n');
 				userObject.state = 'browsing';
 
-				await users.updateOne(
-					{ 'author': userObject.author },
-					{ $set: { 'state': userObject.state } },
-				);
+				await users.updateOne({
+					'author': userObject.author
+				}, {
+					$set: {
+						'state': userObject.state
+					}
+				});
 
 				message.channel.send(printPageOfSessions(foundSessions, 1));
 			}
-		});
-	}
-
-	/**
-	 * Adds a new session entry with session parameters
-	 * into the mongoDB instance for that specific user.
-	 */
-	if (command == '$addSession') {
-		if (userObject.state == 'browsing') {
-			message.reply(' please exit browsing pages before issuing other commands ❌');
-			return;
 		}
 
-		const currentDate = new Date();
-		const currentDateFormat = currentDate.getHours() + ':' + currentDate.getMinutes() + ' - ' + currentDate.getDay() + '/' + currentDate.getMonth() + '/' + currentDate.getFullYear();
+		if (command == '$exit' && userObject.state == 'browsing') {
+			userObject.state = 'main';
 
-		// Retrieving the title from the command string
-		let indexOfFirstQuote = 0;
-		let indexOfLastQuote = 0;
+			await users.updateOne({
+				'author': userObject.author
+			}, {
+				$set: {
+					'state': userObject.state
+				}
+			});
 
-		let isFirstQuoteFound = false;
-
-		const messageText = message.content;
-		for (let i = 0; i < messageText.length; i++) {
-			if (messageText[i] == '"' && isFirstQuoteFound == false) {
-				indexOfFirstQuote = i;
-				isFirstQuoteFound = true;
-			}
-
-			if (messageText[i] == '"' && isFirstQuoteFound == true) {
-				indexOfLastQuote = i;
-			}
+			message.reply(' you have exited browsing pages ✅');
 		}
 
-		const commandArguments = (messageText.substring(0, indexOfFirstQuote - 1) + messageText.substring(indexOfLastQuote + 1, messageText.length)).split(' ');
+		if (command == '$page' && userObject.state == 'browsing') {
+			const commandArguments = message.content.split(' ');
+			message.channel.send(printPageOfSessions(userObject.matchingSessions, commandArguments[1]));
+		}
 
-		const session = {
-			title: messageText.substring(indexOfFirstQuote, indexOfLastQuote + 1),
-			calories: commandArguments[1],
-			distanceTravelled: commandArguments[2],
-			averageSpeed: commandArguments[3],
-			maxSpeed: commandArguments[4],
-			duration: commandArguments[5],
-			date: currentDateFormat,
-			author: message.author.username,
-		};
+		/**
+		 * Adds a new session entry with session parameters
+		 * into the mongoDB instance for that specific user.
+		 */
+		if (command == '$addSession') {
+			if (userObject.state == 'browsing') {
+				message.reply(' please exit browsing pages before issuing other commands ❌');
+				return;
+			}
 
-		// Uploads the session to the mongoDB
-		clientMongo.connect(async () => {
-			const db = clientMongo.db('cycling-bot');
-			const sessions = await db.collection('sessions');
+			const currentDate = new Date();
+			const currentDateFormat = currentDate.getHours() + ':' + currentDate.getMinutes() + ' - ' + currentDate.getDay() + '/' + currentDate.getMonth() + '/' + currentDate.getFullYear();
 
+			// Retrieving the title from the command string
+			let indexOfFirstQuote = 0;
+			let indexOfLastQuote = 0;
+
+			let isFirstQuoteFound = false;
+
+			const messageText = message.content;
+			for (let i = 0; i < messageText.length; i++) {
+				if (messageText[i] == '"' && isFirstQuoteFound == false) {
+					indexOfFirstQuote = i;
+					isFirstQuoteFound = true;
+				}
+
+				if (messageText[i] == '"' && isFirstQuoteFound == true) {
+					indexOfLastQuote = i;
+				}
+			}
+
+			const commandArguments = (messageText.substring(0, indexOfFirstQuote - 1) + messageText.substring(indexOfLastQuote + 1, messageText.length)).split(' ');
+
+			const session = {
+				title: messageText.substring(indexOfFirstQuote, indexOfLastQuote + 1),
+				calories: commandArguments[1],
+				distanceTravelled: commandArguments[2],
+				averageSpeed: commandArguments[3],
+				maxSpeed: commandArguments[4],
+				duration: commandArguments[5],
+				date: currentDateFormat,
+				author: authorUsername,
+			};
+
+			// Uploads the session to the mongoDB
 			await sessions.insertOne(session);
 
 			message.reply(' your session was successfully saved ✅ \n' + getSessionString(session));
-		});
-	}
-
-	/**
-	 * Replies to the user with the total average out of all
-	 * his sessions' individual averages throughout history
-	 */
-	if (command == '$getTotalAverage') {
-		if (userObject.state == 'browsing') {
-			message.reply(' please exit browsing pages before issuing other commands ❌');
-			return;
 		}
 
-		clientMongo.connect(async () => {
-			const db = clientMongo.db('cycling-bot');
-			const sessions = await db.collection('sessions').find().toArray();
+		/**
+		 * Replies to the user with the total average out of all
+		 * his sessions' individual averages throughout history
+		 */
+		if (command == '$getTotalAverage') {
+			if (userObject.state == 'browsing') {
+				message.reply(' please exit browsing pages before issuing other commands ❌');
+				return;
+			}
+
 			const averages = [];
-			const authorUsername = message.author.username;
 
 			for (let i = 0; i < sessions.length; i++) {
 				const element = sessions[i];
@@ -266,24 +286,19 @@ clientDiscord.on('message', async (message) => {
 
 			const totalAverage = averagesSum / averages.length;
 			message.reply(' your total average speed is ``' + totalAverage + ' km/ph`` 💨');
-		});
-	}
-
-	/**
-	 * Replies to the user with the total distance out of all his
-	 * sessions' travelled distances summed up throughout history
-	 */
-	if (command == '$getTotalDistance') {
-		if (userObject.state == 'browsing') {
-			message.reply(' please exit browsing pages before issuing other commands ❌');
-			return;
 		}
 
-		clientMongo.connect(async () => {
-			const db = clientMongo.db('cycling-bot');
-			const sessions = await db.collection('sessions').find().toArray();
+		/**
+		 * Replies to the user with the total distance out of all his
+		 * sessions' travelled distances summed up throughout history
+		 */
+		if (command == '$getTotalDistance') {
+			if (userObject.state == 'browsing') {
+				message.reply(' please exit browsing pages before issuing other commands ❌');
+				return;
+			}
+
 			const distances = [];
-			const authorUsername = message.author.username;
 
 			for (let i = 0; i < sessions.length; i++) {
 				const element = sessions[i];
@@ -300,20 +315,20 @@ clientDiscord.on('message', async (message) => {
 			}
 
 			message.reply(' your total distance travelled is ``' + sumOfDistances + ' km`` 📐');
-		});
-	}
+		}
 
-	/**
-	 * Replies to the user with the total distance out of all his
-	 * sessions' travelled distances summed up throughout history
-	 */
-	if (message.content == '$help') {
-		message.reply(
-			' here are the commands: \n' +
-			'**$addSession** ``"title in quotes"`` ``calories`` ``distance`` ``average speed`` ``max speed`` ``duration``\n' +
-			'**$getSession** ``["title in quotes"]`` ``day`` ``month`` ``year``\n\n'
-		);
-	}
+		/**
+		 * Replies to the user with the total distance out of all his
+		 * sessions' travelled distances summed up throughout history
+		 */
+		if (message.content == '$help') {
+			message.reply(
+				' here are the commands: \n' +
+				'**$addSession** ``"title in quotes"`` ``calories`` ``distance`` ``average speed`` ``max speed`` ``duration``\n' +
+				'**$getSession** ``["title in quotes"]`` ``day`` ``month`` ``year``\n\n'
+			);
+		}
+	});
 });
 
 function sendMessageToChannel(channelId, message) {
@@ -356,10 +371,18 @@ function printPageOfSessions(sessions, page) {
 			j = 0;
 		}
 
+		if (j < pageCapacity && i + 1 == sessions.length) {
+			userPages.push(currentPage);
+		}
+
 		currentPage.items.push(element);
 	}
 
-	let output = 'Page **' + page + '** out of **' + (userPages.length + 1) + '**.\n\n';
+	if (page < 1 || page > userPages.length) {
+		return 'The page number has to be between 1 and ' + userPages.length + ' included ❌';
+	}
+
+	let output = 'Page **' + page + '** out of **' + userPages.length + '**.\n\n';
 
 	for (let i = 0; i < userPages[page - 1].items.length; i++) {
 		const element = userPages[page - 1].items[i];
