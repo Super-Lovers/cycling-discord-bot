@@ -413,10 +413,10 @@ async function main(message, command) {
 	}
 
 	/**
-	 * Depending on the property in the 'set' command string, this block
+	 * Depending on the property in the 'modify' command string, this block
 	 * of code will update that property's value with the value given.
 	 */
-	if (messageText.substring(0, 4) == '$modify') {
+	if (messageText.substring(0, 7) == '$modify') {
 		if (userObject.state == 'browsing') {
 			message.reply(' please exit browsing pages before issuing other commands ❌');
 			return;
