@@ -122,6 +122,7 @@ async function main(message, command) {
 	const users = await db.collection('users');
 	let userObject = 'none';
 
+	const messageText = message.content;
 	const sessionsArray = await db.collection('sessions').find().toArray();
 	const sessions = await db.collection('sessions');
 
@@ -202,7 +203,6 @@ async function main(message, command) {
 	if (command == '$getSession' && message.content.length > command.length) {
 		// Retrieving the title from the command string
 		const commandBreakdown = getCommandBreakdown(message);
-		const messageText = message.content;
 
 		const commandArguments = (messageText.substring(0, commandBreakdown.indexOfFirstQuote - 1) + messageText.substring(commandBreakdown.indexOfLastQuote + 1, messageText.length)).split(' ');
 
@@ -309,7 +309,6 @@ async function main(message, command) {
 
 		let isFirstQuoteFound = false;
 
-		const messageText = message.content;
 		for (let i = 0; i < messageText.length; i++) {
 			if (messageText[i] == '"' && isFirstQuoteFound == false) {
 				indexOfFirstQuote = i;
@@ -399,6 +398,94 @@ async function main(message, command) {
 		message.reply(' your total distance travelled is ``' + sumOfDistances + ' km`` 📐');
 	}
 
+	if (messageText.substring(0, 4) == '$set') {
+		if (userObject.state == 'browsing') {
+			message.reply(' please exit browsing pages before issuing other commands ❌');
+			return;
+		}
+
+		const commandArguments = messageText.split(' ');
+		const commandBreakdown = getCommandBreakdown(message);
+		let session;
+
+		for (let i = 0; i < sessionsArray.length; i++) {
+			const element = sessionsArray[i];
+
+			if (element.title == commandBreakdown.sessionTitle) {
+				session = element;
+				break;
+			}
+		}
+
+		if (session.author != authorUsername) {
+			message.reply(' you cannot edit a foreign session ❌');
+			return;
+		}
+
+		const newValue = commandArguments[commandArguments.length - 1];
+		if (command == '$setCalories') {
+			session.calories = newValue;
+
+			await sessions.updateOne({
+				'title': commandBreakdown.sessionTitle
+			}, {
+				$set: {
+					'calories': newValue
+				}
+			});
+		}
+
+		if (command == '$setDistanceTravelled') {
+			session.distanceTravelled = newValue;
+
+			await sessions.updateOne({
+				'title': commandBreakdown.sessionTitle
+			}, {
+				$set: {
+					'distanceTravelled': newValue
+				}
+			});
+		}
+
+		if (command == '$setAverageSpeed') {
+			session.averageSpeed = newValue;
+
+			await sessions.updateOne({
+				'title': commandBreakdown.sessionTitle
+			}, {
+				$set: {
+					'averageSpeed': newValue
+				}
+			});
+		}
+
+		if (command == '$setMaximumSpeed') {
+			session.maxSpeed = newValue;
+
+			await sessions.updateOne({
+				'title': commandBreakdown.sessionTitle
+			}, {
+				$set: {
+					'maxSpeed': newValue
+				}
+			});
+		}
+
+		if (command == '$setDuration') {
+			session.duration = newValue;
+
+			await sessions.updateOne({
+				'title': commandBreakdown.sessionTitle
+			}, {
+				$set: {
+					'duration': newValue
+				}
+			});
+		}
+
+		message.reply(' session ' + commandBreakdown.sessionTitle + ' was successfully updated ✅\n' + getSessionString(session));
+	}
+
 	/**
 	 * Replies to the user with the total distance out of all his
 	 * sessions' travelled distances summed up throughout history
@@ -407,7 +494,12 @@ async function main(message, command) {
 		message.reply(
 			' here are the commands: \n' +
 			'**$addSession** ``"title in quotes"`` ``calories`` ``distance`` ``average speed`` ``max speed`` ``duration``\n' +
-			'**$getSession** ``["title in quotes"]`` ``day`` ``month`` ``year``\n\n'
+			'**$getSession** ``"title in quotes"`` ``day`` ``month`` ``year``\n' +
+			'**$setCalories** ``"title in quotes"`` ``new calories``\n' +
+			'**$setDistanceTravelled** ``"title in quotes"`` ``new distance``\n' +
+			'**$setAverageSpeed** ``"title in quotes"`` ``new average speed``\n' +
+			'**$setMaximumSpeed** ``"title in quotes"`` ``new maximum speed``\n' +
+			'**$setDuration** ``"title in quotes"`` ``new duration``\n\n'
 		);
 	}
 }
