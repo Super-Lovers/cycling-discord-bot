@@ -58,12 +58,23 @@ function sendMessageToChannel(channelId, message) {
  * Returns the given session's details in a well-formatted string
  */
 function getSessionString(session) {
+	let distanceUnits;
+	let speedUnits;
+
+	if (session.unitSystem == 'imperial') {
+		speedUnits = 'm/ph';
+		distanceUnits = 'miles';
+	} else {
+		speedUnits = 'km/ph';
+		distanceUnits = 'kilometers';
+	}
+
 	return 'Session **' + session.title.substring(1, session.title.length - 1) + '** from [' + session.date + ']\n\n' +
 		'=> **Calories burned:** ``' + session.calories + '`` 🍕\n' +
-		'=> **Distance travelled:** ``' + session.distanceTravelled + ' km`` 📐\n' +
-		'=> **Average speed:** ``' + session.averageSpeed + ' km/ph`` 💨\n' +
-		'=> **Maximum speed:** ``' + session.maxSpeed + ' km/ph`` 💨\n' +
-		'=> **Duration:** ``' + session.duration + ' mins.`` ⏲️\n';
+		'=> **Distance travelled:** ``' + session.distanceTravelled + ' ' + distanceUnits + '`` 📐\n' +
+		'=> **Average speed:** ``' + session.averageSpeed + ' ' + speedUnits + '`` 💨\n' +
+		'=> **Maximum speed:** ``' + session.maxSpeed + ' ' + speedUnits + '`` 💨\n' +
+		'=> **Duration:** ``' + session.duration + ' minutes.`` ⏲️\n';
 }
 
 /**
@@ -143,6 +154,7 @@ async function main(message, command) {
 		const newUser = {
 			'state': 'main',
 			'author': authorUsername,
+			'unitSystem': 'metric',
 			'matchingSessions': [],
 		};
 
@@ -322,6 +334,7 @@ async function main(message, command) {
 
 		const commandArguments = (messageText.substring(0, indexOfFirstQuote - 1) + messageText.substring(indexOfLastQuote + 1, messageText.length)).split(' ');
 
+		const unitSystem = getUnitSystem(userObject);
 		const session = {
 			title: messageText.substring(indexOfFirstQuote, indexOfLastQuote + 1),
 			calories: commandArguments[1],
@@ -331,6 +344,7 @@ async function main(message, command) {
 			duration: commandArguments[5],
 			date: currentDateFormat,
 			author: authorUsername,
+			unitSystem: unitSystem,
 		};
 
 		// Uploads the session to the mongoDB
@@ -402,7 +416,7 @@ async function main(message, command) {
 	 * Depending on the property in the 'set' command string, this block
 	 * of code will update that property's value with the value given.
 	 */
-	if (messageText.substring(0, 4) == '$set') {
+	if (messageText.substring(0, 4) == '$modify') {
 		if (userObject.state == 'browsing') {
 			message.reply(' please exit browsing pages before issuing other commands ❌');
 			return;
@@ -427,7 +441,7 @@ async function main(message, command) {
 		}
 
 		const newValue = commandArguments[commandArguments.length - 1];
-		if (command == '$setCalories') {
+		if (command == '$modifyCalories') {
 			session.calories = newValue;
 
 			await sessions.updateOne({
@@ -439,7 +453,7 @@ async function main(message, command) {
 			});
 		}
 
-		if (command == '$setDistanceTravelled') {
+		if (command == '$modifyDistanceTravelled') {
 			session.distanceTravelled = newValue;
 
 			await sessions.updateOne({
@@ -451,7 +465,7 @@ async function main(message, command) {
 			});
 		}
 
-		if (command == '$setAverageSpeed') {
+		if (command == '$modifyAverageSpeed') {
 			session.averageSpeed = newValue;
 
 			await sessions.updateOne({
@@ -463,7 +477,7 @@ async function main(message, command) {
 			});
 		}
 
-		if (command == '$setMaximumSpeed') {
+		if (command == '$modifyMaximumSpeed') {
 			session.maxSpeed = newValue;
 
 			await sessions.updateOne({
@@ -475,7 +489,7 @@ async function main(message, command) {
 			});
 		}
 
-		if (command == '$setDuration') {
+		if (command == '$modifyDuration') {
 			session.duration = newValue;
 
 			await sessions.updateOne({
@@ -490,6 +504,41 @@ async function main(message, command) {
 		message.reply(' session ' + commandBreakdown.sessionTitle + ' was successfully updated ✅\n' + getSessionString(session));
 	}
 
+	if (command == '$setUnitSystem') {
+		if (userObject.state == 'browsing') {
+			message.reply(' please exit browsing pages before issuing other commands ❌');
+			return;
+		}
+
+		const commandArguments = messageText.split(' ');
+		const unitSystem = commandArguments[1];
+
+		if (unitSystem == 'imperial' ||
+			unitSystem == 'metric') {
+
+			await users.updateOne({
+				'author': authorUsername
+			}, {
+				$set: {
+					'unitSystem': unitSystem
+				}
+			});
+
+			message.reply(' your unit system is set to ' + unitSystem + ' ✅');
+		} else {
+			message.reply(' this unit system is invalid, please pick either "imperial" or "metric" ❌');
+		}
+	}
+
+	if (command == '$getUnitSystem') {
+		if (userObject.state == 'browsing') {
+			message.reply(' please exit browsing pages before issuing other commands ❌');
+			return;
+		}
+
+		message.reply(' your unit system is **' + userObject.unitSystem + '** 👍');
+	}
+
 	/**
 	 * Replies to the user with the total distance out of all his
 	 * sessions' travelled distances summed up throughout history
@@ -498,12 +547,14 @@ async function main(message, command) {
 		message.reply(
 			' here are the commands: \n' +
 			'**$addSession** ``"title in quotes"`` ``calories`` ``distance`` ``average speed`` ``max speed`` ``duration``\n' +
-			'**$getSession** ``"title in quotes"`` ``day`` ``month`` ``year``\n' +
-			'**$setCalories** ``"title in quotes"`` ``new calories``\n' +
-			'**$setDistanceTravelled** ``"title in quotes"`` ``new distance``\n' +
-			'**$setAverageSpeed** ``"title in quotes"`` ``new average speed``\n' +
-			'**$setMaximumSpeed** ``"title in quotes"`` ``new maximum speed``\n' +
-			'**$setDuration** ``"title in quotes"`` ``new duration``\n\n'
+			'**$setUnitSystem** ``imperial`` or ``metric``\n' +
+			'**$getUnitSystem** shows your current unit system\n' +
+			'**$getSession** ``"title in quotes"`` ``day`` ``month`` ``year``\n\n' +
+			'**$modifyCalories** ``"title in quotes"`` ``new calories``\n' +
+			'**$modifyDistanceTravelled** ``"title in quotes"`` ``new distance``\n' +
+			'**$modifyAverageSpeed** ``"title in quotes"`` ``new average speed``\n' +
+			'**$modifyMaximumSpeed** ``"title in quotes"`` ``new maximum speed``\n' +
+			'**$modifyDuration** ``"title in quotes"`` ``new duration``\n\n'
 		);
 	}
 }
@@ -540,4 +591,8 @@ function getCommandBreakdown(message) {
 		indexOfFirstQuote,
 		indexOfLastQuote
 	};
+}
+
+function getUnitSystem(userObject) {
+	return userObject.unitSystem == 'imperial' ? 'imperial' : 'metric';
 }
