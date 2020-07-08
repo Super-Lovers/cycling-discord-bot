@@ -175,31 +175,38 @@ async function main(message, command) {
 	}
 
 	/**
+	 * Deletes the name of the session give as argument.
+	 */
+	if (command == '$deleteSession') {
+		if (userObject.state == 'browsing') {
+			message.reply(' please exit browsing pages before issuing other commands ❌');
+			return;
+		}
+
+		const commandBreakdown = getCommandBreakdown(message);
+		const result = await sessions.deleteOne({
+			'title': {
+				$eq: commandBreakdown.sessionTitle
+			}
+		});
+
+		if (result.deletedCount > 0) {
+			message.reply(' **' + commandBreakdown.sessionTitle + '**' + ' was successfully removed ✅');
+		}
+	}
+
+	/**
 	 * Replies back to the user how many sessions were found
 	 * based on the given session/s date and displays them.
 	 */
 	if (command == '$getSession' && message.content.length > command.length) {
 		// Retrieving the title from the command string
-		let indexOfFirstQuote = 0;
-		let indexOfLastQuote = 0;
-
-		let isFirstQuoteFound = false;
-
+		const commandBreakdown = getCommandBreakdown(message);
 		const messageText = message.content;
-		for (let i = 0; i < messageText.length; i++) {
-			if (messageText[i] == '"' && isFirstQuoteFound == false) {
-				indexOfFirstQuote = i;
-				isFirstQuoteFound = true;
-			}
 
-			if (messageText[i] == '"' && isFirstQuoteFound == true) {
-				indexOfLastQuote = i;
-			}
-		}
+		const commandArguments = (messageText.substring(0, commandBreakdown.indexOfFirstQuote - 1) + messageText.substring(commandBreakdown.indexOfLastQuote + 1, messageText.length)).split(' ');
 
-		const commandArguments = (messageText.substring(0, indexOfFirstQuote - 1) + messageText.substring(indexOfLastQuote + 1, messageText.length)).split(' ');
-
-		const sessionTitle = messageText.substring(indexOfFirstQuote, indexOfLastQuote + 1);
+		const sessionTitle = messageText.substring(commandBreakdown.indexOfFirstQuote, commandBreakdown.indexOfLastQuote + 1);
 		const foundSessions = [];
 
 		for (let i = 0; i < sessionsArray.length; i++) {
@@ -216,7 +223,7 @@ async function main(message, command) {
 			const elementYear = parseInt(elementDate[2]);
 			const elementTitle = element.title;
 
-			if (indexOfFirstQuote == 0) {
+			if (commandBreakdown.indexOfFirstQuote == 0) {
 				const sessionDay = commandArguments[1];
 				const sessionMonth = commandArguments[2];
 				const sessionYear = commandArguments[3];
@@ -403,4 +410,38 @@ async function main(message, command) {
 			'**$getSession** ``["title in quotes"]`` ``day`` ``month`` ``year``\n\n'
 		);
 	}
+}
+
+/**
+ * Returns an object of items from inside a complex
+ * command that includes strings and numbers.
+ */
+function getCommandBreakdown(message) {
+	let indexOfFirstQuote = 0;
+	let indexOfLastQuote = 0;
+
+	let isFirstQuoteFound = false;
+
+	const messageText = message.content;
+	for (let i = 0; i < messageText.length; i++) {
+		if (messageText[i] == '"' && isFirstQuoteFound == false) {
+			indexOfFirstQuote = i;
+			isFirstQuoteFound = true;
+		}
+
+		if (messageText[i] == '"' && isFirstQuoteFound == true) {
+			indexOfLastQuote = i;
+		}
+	}
+
+	const commandArguments = (messageText.substring(0, indexOfFirstQuote - 1) + messageText.substring(indexOfLastQuote + 1, messageText.length)).split(' ');
+
+	const sessionTitle = messageText.substring(indexOfFirstQuote, indexOfLastQuote + 1);
+
+	return {
+		commandArguments,
+		sessionTitle,
+		indexOfFirstQuote,
+		indexOfLastQuote
+	};
 }
