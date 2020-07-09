@@ -3,7 +3,7 @@
 const Discord = require('discord.js');
 const clientDiscord = new Discord.Client();
 
-const generalChannelID = '729690910626938973';
+const generalChannelID = '730721242675413036';
 
 // MongoDB variables
 // *********************************
@@ -24,7 +24,7 @@ clientDiscord.once('ready', () => {
 });
 
 clientDiscord.on('message', async (message) => {
-	if (message.author.username == 'Cycling Bot') {
+	if (message.author.bot == true) {
 		return;
 	}
 
